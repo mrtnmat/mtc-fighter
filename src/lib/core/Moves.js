@@ -72,6 +72,86 @@ function preciseStrike(params) {
   };
 }
 
+/**
+ * Move list with all available moves
+ */
+export const moveList = {
+  'PreciseStrike': createMove({
+    name: 'Precise Strike',
+    description: 'A consistent attack that always deals the same damage.',
+    execute: preciseStrike
+  }),
+
+  'WildSwing': createMove({
+    name: 'Wild Swing',
+    description: 'A highly unpredictable attack that deals random damage.',
+    execute: wildSwing
+  }),
+
+  'CalculatedRisk': createMove({
+    name: 'Calculated Risk',
+    description: 'Deals more damage when user has lower HP.',
+    execute: calculatedRisk
+  }),
+
+  'DoubleEdge': createMove({
+    name: 'Double Edge',
+    description: 'A powerful attack that also damages the user.',
+    execute: doubleEdge
+  }),
+
+  'MomentumSwing': createMove({
+    name: 'Momentum Swing',
+    description: 'Deals more damage if the user\'s previous attack was successful.',
+    execute: momentumSwing
+  }),
+
+  'AllOrNothing': createMove({
+    name: 'All or Nothing',
+    description: 'Either deals massive damage or completely misses.',
+    execute: allOrNothing
+  }),
+
+  'Reversal': createMove({
+    name: 'Reversal',
+    description: 'Deals significantly more damage when the user has low HP.',
+    execute: reversal
+  }),
+
+  'AdaptiveStrike': createMove({
+    name: 'Adaptive Strike',
+    description: 'Deals more damage when the opponent has high HP, less when they have low HP.',
+    execute: adaptiveStrike
+  })
+};
+
+/**
+ * Create a move instance from the move list
+ * This creates a move with the same functions but breaks the reference
+ */
+export function createMoveInstance(moveKey) {
+  const move = moveList[moveKey];
+  if (!move) {
+    throw new Error(`Unknown move: ${moveKey}`);
+  }
+  // Create new object but keep the execute function
+  return {
+    name: move.name,
+    description: move.description
+  };
+}
+
+/**
+ * Get a subset of moves for a fighter
+ */
+export function getMovesSubset(moveKeys) {
+  const moves = {};
+  moveKeys.forEach((key, index) => {
+    moves[`move${index + 1}`] = createMoveInstance(key);
+  });
+  return moves;
+}
+
 // Wild Swing - Highly variable damage (can be very low or very high)
 function wildSwing(params) {
   const { attacker, defender } = params;
@@ -166,8 +246,7 @@ function momentumSwing(params) {
     const lastMove = history[history.length - 1];
 
     // If last move was from this attacker and did damage
-    const lastAttackerId = `fighter${attacker.id}`;
-    if (lastMove.attacker === lastAttackerId && lastMove.damage > 0) {
+    if (lastMove.attacker === 'fighter2' && lastMove.damage > 0) {
       // Bonus damage is 50% of last damage
       const bonusDamage = Math.round(lastMove.damage * 0.5);
       baseDamage += bonusDamage;
@@ -271,84 +350,4 @@ function adaptiveStrike(params) {
     defender: newDefender,
     damage
   };
-}
-
-/**
- * Move list with all available moves
- */
-export const moveList = {
-  'PreciseStrike': createMove({
-    name: 'Precise Strike',
-    description: 'A consistent attack that always deals the same damage.',
-    execute: preciseStrike
-  }),
-
-  'WildSwing': createMove({
-    name: 'Wild Swing',
-    description: 'A highly unpredictable attack that deals random damage.',
-    execute: wildSwing
-  }),
-
-  'CalculatedRisk': createMove({
-    name: 'Calculated Risk',
-    description: 'Deals more damage when user has lower HP.',
-    execute: calculatedRisk
-  }),
-
-  'DoubleEdge': createMove({
-    name: 'Double Edge',
-    description: 'A powerful attack that also damages the user.',
-    execute: doubleEdge
-  }),
-
-  'MomentumSwing': createMove({
-    name: 'Momentum Swing',
-    description: 'Deals more damage if the user\'s previous attack was successful.',
-    execute: momentumSwing
-  }),
-
-  'AllOrNothing': createMove({
-    name: 'All or Nothing',
-    description: 'Either deals massive damage or completely misses.',
-    execute: allOrNothing
-  }),
-
-  'Reversal': createMove({
-    name: 'Reversal',
-    description: 'Deals significantly more damage when the user has low HP.',
-    execute: reversal
-  }),
-
-  'AdaptiveStrike': createMove({
-    name: 'Adaptive Strike',
-    description: 'Deals more damage when the opponent has high HP, less when they have low HP.',
-    execute: adaptiveStrike
-  })
-};
-
-/**
- * Create a move instance from the move list
- * This creates a move with the same functions but breaks the reference
- */
-export function createMoveInstance(moveKey) {
-  const move = moveList[moveKey];
-  if (!move) {
-    throw new Error(`Unknown move: ${moveKey}`);
-  }
-  // Create new object but keep the execute function
-  return {
-    name: move.name,
-    description: move.description
-  };
-}
-
-/**
- * Get a subset of moves for a fighter
- */
-export function getMovesSubset(moveKeys) {
-  const moves = {};
-  moveKeys.forEach((key, index) => {
-    moves[`move${index + 1}`] = createMoveInstance(key);
-  });
-  return moves;
 }

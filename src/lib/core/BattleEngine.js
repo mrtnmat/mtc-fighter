@@ -12,8 +12,14 @@ import { moveList } from './Moves.js';
  */
 export function createBattleState(fighter1, fighter2) {
   const battleState = {
-    fighter1: { ...fighter1 },
-    fighter2: { ...fighter2 },
+    fighter1: { 
+      ...fighter1,
+      maxHp: fighter1.hp // Ensure maxHp is set
+    },
+    fighter2: { 
+      ...fighter2,
+      maxHp: fighter2.hp // Ensure maxHp is set
+    },
     turn: 1,
     battleOver: false,
     winner: null,

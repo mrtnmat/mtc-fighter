@@ -1,17 +1,10 @@
 @import "tailwindcss";
 
-/* Custom animations */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
-.pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Base styles */
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
 /* Custom scrollbar styles */
@@ -31,11 +24,4 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #777;
-}
-
-/* Base styles */
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  margin: 0;
-  padding: 0;
 }
