@@ -3,27 +3,41 @@
   Main component that orchestrates the battle
 -->
 <script>
-  import { onDestroy, onMount } from 'svelte';
-  import FighterCard from './FighterCard.svelte';
-  import BattleLog from './BattleLog.svelte';
-  import { createFighter } from '../core/BattleEngine.js';
-  import { getMovesSubset } from '../core/Moves.js';
-  import { selectBestMoveForAI } from '../core/MonteCarlo.js';
-  import { createBattleState, executeTurn } from '../core/BattleEngine.js';
-  import { initializeBattleLog, cleanupEventListeners, addCustomLogMessage } from '../services/BattleLogManager.js';
-  import { battleEvents, BATTLE_EVENTS, createEventData } from '../core/EventSystem.js';
-  import { FIGHTER_CONSTANTS, UI_CONSTANTS, DIFFICULTY_LEVELS, GAME_STATES, FIGHTER_IDS } from '../core/Constants.js';
+  import { onDestroy, onMount } from "svelte";
+  import FighterCard from "./FighterCard.svelte";
+  import BattleLog from "./BattleLog.svelte";
+  import { createFighter } from "../core/BattleEngine.js";
+  import { getMovesSubset } from "../core/Moves.js";
+  import { selectBestMoveForAI } from "../core/MonteCarlo.js";
+  import { createBattleState, executeTurn } from "../core/BattleEngine.js";
+  import {
+    initializeBattleLog,
+    cleanupEventListeners,
+    addCustomLogMessage,
+  } from "../services/BattleLogManager.js";
+  import {
+    battleEvents,
+    BATTLE_EVENTS,
+    createEventData,
+  } from "../core/EventSystem.js";
+  import {
+    FIGHTER_CONSTANTS,
+    UI_CONSTANTS,
+    DIFFICULTY_LEVELS,
+    GAME_STATES,
+    FIGHTER_IDS,
+  } from "../core/Constants.js";
 
   // Props for the component
   let { difficulty = DIFFICULTY_LEVELS.MEDIUM } = $props();
 
-  // Game state
+  // Game state - use primitive values separately instead of nested objects
   let gameState = $state(GAME_STATES.WAITING_FOR_PLAYER);
   let battleState = $state(null);
   let selectedMove = $state(null);
   let aiMoveStats = $state([]);
   let showAIMoveStats = $state(false);
-  
+
   // Initialize on component mount
   onMount(() => {
     startNewBattle();
@@ -45,9 +59,14 @@
       {
         hp: FIGHTER_CONSTANTS.DEFAULT_HP,
         maxHp: FIGHTER_CONSTANTS.DEFAULT_HP,
-        speed: FIGHTER_CONSTANTS.DEFAULT_SPEED
+        speed: FIGHTER_CONSTANTS.DEFAULT_SPEED,
       },
-      getMovesSubset(['PreciseStrike', 'WildSwing', 'CalculatedRisk', 'Reversal'])
+      getMovesSubset([
+        "PreciseStrike",
+        "WildSwing",
+        "CalculatedRisk",
+        "Reversal",
+      ]),
     );
     player.id = 1; // Add ID for move execution
 
@@ -57,15 +76,20 @@
       {
         hp: FIGHTER_CONSTANTS.DEFAULT_HP,
         maxHp: FIGHTER_CONSTANTS.DEFAULT_HP,
-        speed: FIGHTER_CONSTANTS.DEFAULT_SPEED - 1 // Slightly slower than player
+        speed: FIGHTER_CONSTANTS.DEFAULT_SPEED - 1, // Slightly slower than player
       },
-      getMovesSubset(['DoubleEdge', 'AllOrNothing', 'MomentumSwing', 'AdaptiveStrike'])
+      getMovesSubset([
+        "DoubleEdge",
+        "AllOrNothing",
+        "MomentumSwing",
+        "AdaptiveStrike",
+      ]),
     );
     ai.id = 2; // Add ID for move execution
 
-    // Create battle state
+    // Create battle state - create a fresh object
     battleState = createBattleState(player, ai);
-    
+
     // Reset game state
     gameState = GAME_STATES.WAITING_FOR_PLAYER;
     selectedMove = null;
@@ -75,7 +99,10 @@
 
   // Handle player move selection
   async function handleMoveSelect(moveKey) {
-    if (gameState !== GAME_STATES.WAITING_FOR_PLAYER || battleState.battleOver) {
+    if (
+      gameState !== GAME_STATES.WAITING_FOR_PLAYER ||
+      battleState.battleOver
+    ) {
       return;
     }
 
@@ -88,46 +115,48 @@
       BATTLE_EVENTS.AI_THINKING,
       createEventData(BATTLE_EVENTS.AI_THINKING, {
         fighter: battleState.fighter2,
-        simulationCount: difficulty.simulationCount
-      })
+        simulationCount: difficulty.simulationCount,
+      }),
     );
 
     // Wait minimum time for AI to appear to "think"
     const thinkingStartTime = Date.now();
-    
+
     // Run Monte Carlo simulation to find best move
     const { move: aiMove, stats } = selectBestMoveForAI(
-      battleState, 
+      battleState,
       moveKey,
-      difficulty.simulationCount
+      difficulty.simulationCount,
     );
-    
-    // Store move stats for display
-    aiMoveStats = stats;
-    
+
+    // Store move stats for display - create a fresh array
+    aiMoveStats = [...stats];
+
     // Ensure AI "thinks" for a minimum amount of time
     const elapsedTime = Date.now() - thinkingStartTime;
     if (elapsedTime < UI_CONSTANTS.AI_THINKING_MIN_TIME) {
-      await new Promise(resolve => setTimeout(resolve, UI_CONSTANTS.AI_THINKING_MIN_TIME - elapsedTime));
+      await new Promise((resolve) =>
+        setTimeout(resolve, UI_CONSTANTS.AI_THINKING_MIN_TIME - elapsedTime),
+      );
     }
-    
+
     // Get the best move's win rate
-    const bestMoveStats = stats.find(stat => stat.move === aiMove);
+    const bestMoveStats = stats.find((stat) => stat.move === aiMove);
     const winRate = bestMoveStats ? bestMoveStats.winRate : 0;
-    
+
     // Emit AI move selected event
     battleEvents.emit(
       BATTLE_EVENTS.AI_MOVE_SELECTED,
       createEventData(BATTLE_EVENTS.AI_MOVE_SELECTED, {
         fighter: battleState.fighter2,
         move: battleState.fighter2.moves[aiMove],
-        winRate: winRate
-      })
+        winRate: winRate,
+      }),
     );
-    
+
     // Update game state
     gameState = GAME_STATES.EXECUTING_TURN;
-    
+
     // Execute the turn with slight delay for UI
     setTimeout(() => {
       executeBattleTurn(moveKey, aiMove);
@@ -137,15 +166,11 @@
   // Execute a battle turn
   function executeBattleTurn(playerMoveKey, aiMoveKey) {
     // Execute the turn
-    const newBattleState = executeTurn(
-      battleState,
-      playerMoveKey,
-      aiMoveKey
-    );
-    
-    // Update battle state
+    const newBattleState = executeTurn(battleState, playerMoveKey, aiMoveKey);
+
+    // Update battle state with new object to avoid reactive identity issues
     battleState = newBattleState;
-    
+
     // Check if battle is over
     if (newBattleState.battleOver) {
       gameState = GAME_STATES.BATTLE_OVER;
@@ -187,10 +212,12 @@
           {:else if gameState === GAME_STATES.EXECUTING_TURN}
             Executing turn...
           {:else if gameState === GAME_STATES.BATTLE_OVER}
-            Battle over! {battleState.winner === FIGHTER_IDS.PLAYER ? 'You won!' : 'AI won!'}
+            Battle over! {battleState.winner === FIGHTER_IDS.PLAYER
+              ? "You won!"
+              : "AI won!"}
           {/if}
         </div>
-        
+
         <div class="mt-2 text-sm">
           Turn: {battleState.turn}
         </div>
@@ -207,7 +234,7 @@
           showMoveStats={showAIMoveStats}
           moveStats={aiMoveStats}
         />
-        
+
         <!-- Player Fighter -->
         <FighterCard
           fighter={battleState.fighter1}
@@ -221,29 +248,27 @@
 
       <!-- Battle Log -->
       <BattleLog />
-      
+
       <!-- Action Buttons -->
       <div class="flex justify-between">
         <button
           class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
           onclick={handleReset}
         >
-          {battleState.battleOver ? 'New Battle' : 'Reset Battle'}
+          {battleState.battleOver ? "New Battle" : "Reset Battle"}
         </button>
-        
+
         {#if battleState.battleOver}
           <button
             class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-md"
             onclick={toggleAIMoveStats}
           >
-            {showAIMoveStats ? 'Hide AI Analysis' : 'Show AI Analysis'}
+            {showAIMoveStats ? "Hide AI Analysis" : "Show AI Analysis"}
           </button>
         {/if}
       </div>
     {:else}
-      <div class="text-center py-8">
-        Loading battle...
-      </div>
+      <div class="text-center py-8">Loading battle...</div>
     {/if}
   </div>
 </div>

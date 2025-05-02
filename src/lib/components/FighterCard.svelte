@@ -3,8 +3,8 @@
   Displays a fighter's status and available moves
 -->
 <script>
-  import MoveButton from './MoveButton.svelte';
-  import { UI_CONSTANTS } from '../core/Constants.js';
+  import MoveButton from "./MoveButton.svelte";
+  import { UI_CONSTANTS } from "../core/Constants.js";
 
   // Props for the component
   let {
@@ -15,19 +15,19 @@
     onMoveSelect = (moveKey) => {},
     highlightedMove = null,
     showMoveStats = false, // Show win rates for AI moves
-    moveStats = [] // Stats for Monte Carlo analysis
+    moveStats = [], // Stats for Monte Carlo analysis
   } = $props();
 
   // Calculate HP percentage for the health bar
   let hpPercentage = $derived(
-    Math.max(0, Math.min(100, (fighter.hp / fighter.maxHp) * 100))
+    Math.max(0, Math.min(100, (fighter.hp / fighter.maxHp) * 100)),
   );
 
   // Determine HP bar color based on percentage
   let hpBarColor = $derived(() => {
-    if (hpPercentage > UI_CONSTANTS.HP_HIGH) return 'bg-green-500';
-    if (hpPercentage > UI_CONSTANTS.HP_MEDIUM) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (hpPercentage > UI_CONSTANTS.HP_HIGH) return "bg-green-500";
+    if (hpPercentage > UI_CONSTANTS.HP_MEDIUM) return "bg-yellow-500";
+    return "bg-red-500";
   });
 
   // Calculate color classes based on the color prop
@@ -44,12 +44,21 @@
       green: {
         bg: "bg-green-50",
         border: "border-green-300",
-      }
-    }[color]
+      },
+    }[color],
   );
+
+  // Handle move selection
+  function handleMoveSelection(moveKey) {
+    if (!battleOver && isPlayer) {
+      onMoveSelect(moveKey);
+    }
+  }
 </script>
 
-<div class="p-4 rounded-md mb-4 shadow-md {colorClasses.bg} border {colorClasses.border}">
+<div
+  class="p-4 rounded-md mb-4 shadow-md {colorClasses.bg} border {colorClasses.border}"
+>
   <div class="flex justify-between items-center mb-2">
     <h3 class="font-bold text-lg">{fighter.name}</h3>
     <span class="text-sm">HP: {fighter.hp}/{fighter.maxHp}</span>
@@ -68,18 +77,18 @@
     <div class="grid gap-2">
       {#each Object.entries(fighter.moves) as [moveKey, move]}
         <MoveButton
-          move={move}
-          moveKey={moveKey}
-          color={color}
+          {move}
+          {moveKey}
+          {color}
           disabled={battleOver || !isPlayer}
           highlighted={highlightedMove === moveKey}
-          onSelect={onMoveSelect}
+          onSelect={handleMoveSelection}
         />
-        
+
         <!-- Move Stats for AI (if available) -->
         {#if showMoveStats && moveStats.length > 0}
-          {#if moveStats.find(stat => stat.move === moveKey)}
-            {@const stat = moveStats.find(stat => stat.move === moveKey)}
+          {#if moveStats.find((stat) => stat.move === moveKey)}
+            {@const stat = moveStats.find((stat) => stat.move === moveKey)}
             <div class="mb-3 text-xs bg-gray-800 text-white p-2 rounded">
               <div>Win rate: {(stat.winRate * 100).toFixed(1)}%</div>
               <div>Simulations: {stat.visits}</div>
