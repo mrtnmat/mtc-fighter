@@ -10,21 +10,24 @@ import { battleEvents, BATTLE_EVENTS, createEventData } from './EventSystem.js';
 /**
  * Apply damage to a fighter
  */
-function applyDamage(fighter, amount) {
+function applyDamage(fighter, amount, isSimulation = false) {
   const newFighter = { ...fighter };
   const actualDamage = Math.round(amount); // Ensure damage is an integer
   newFighter.hp = Math.max(0, newFighter.hp - actualDamage);
 
-  // Emit damage applied event
-  battleEvents.emit(
-    BATTLE_EVENTS.DAMAGE_APPLIED,
-    createEventData(BATTLE_EVENTS.DAMAGE_APPLIED, {
-      fighter: newFighter,
-      damageAmount: actualDamage,
-      remainingHp: newFighter.hp,
-      maxHp: newFighter.maxHp
-    })
-  );
+  // Only emit events if not a simulation
+  if (!isSimulation) {
+    // Emit damage applied event
+    battleEvents.emit(
+      BATTLE_EVENTS.DAMAGE_APPLIED,
+      createEventData(BATTLE_EVENTS.DAMAGE_APPLIED, {
+        fighter: newFighter,
+        damageAmount: actualDamage,
+        remainingHp: newFighter.hp,
+        maxHp: newFighter.maxHp
+      })
+    );
+  }
 
   return {
     fighter: newFighter,
@@ -56,13 +59,13 @@ function createMove({
 
 // Precise Strike - Consistent medium damage
 function preciseStrike(params) {
-  const { attacker, defender } = params;
+  const { attacker, defender, isSimulation } = params;
 
   // Consistent damage - 15 points
   const baseDamage = 15;
 
   // Apply damage to defender
-  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
   // Return updated state
   return {
@@ -154,14 +157,14 @@ export function getMovesSubset(moveKeys) {
 
 // Wild Swing - Highly variable damage (can be very low or very high)
 function wildSwing(params) {
-  const { attacker, defender } = params;
+  const { attacker, defender, isSimulation } = params;
 
   // Random damage between 5 and 30
   // Uses a flatter distribution to make it less predictable
   const baseDamage = 5 + Math.floor(Math.random() * 26);
 
   // Apply damage to defender
-  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
   // Return updated state
   return {
@@ -173,7 +176,7 @@ function wildSwing(params) {
 
 // Calculated Risk - Damage increases when user's HP is lower
 function calculatedRisk(params) {
-  const { attacker, defender } = params;
+  const { attacker, defender, isSimulation } = params;
 
   // Base damage of 10
   let baseDamage = 10;
@@ -187,7 +190,7 @@ function calculatedRisk(params) {
   baseDamage += hpBonus;
 
   // Apply damage to defender
-  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
   // Return updated state
   return {
@@ -199,7 +202,7 @@ function calculatedRisk(params) {
 
 // Double Edge - High damage but hurts user too
 function doubleEdge(params) {
-  const { attacker, defender } = params;
+  const { attacker, defender, isSimulation } = params;
 
   // High base damage - 25 points
   const baseDamage = 25;
@@ -208,20 +211,23 @@ function doubleEdge(params) {
   const recoilDamage = 8;
 
   // Apply damage to defender
-  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
   // Apply recoil damage to attacker
-  const { fighter: newAttacker } = applyDamage(attacker, recoilDamage);
+  const { fighter: newAttacker } = applyDamage(attacker, recoilDamage, isSimulation);
 
-  // Emit recoil event
-  battleEvents.emit(
-    BATTLE_EVENTS.RECOIL_DAMAGE,
-    createEventData(BATTLE_EVENTS.RECOIL_DAMAGE, {
-      fighter: newAttacker,
-      recoilDamage,
-      move: params.move.name
-    })
-  );
+  // Only emit events if not a simulation
+  if (!isSimulation) {
+    // Emit recoil event
+    battleEvents.emit(
+      BATTLE_EVENTS.RECOIL_DAMAGE,
+      createEventData(BATTLE_EVENTS.RECOIL_DAMAGE, {
+        fighter: newAttacker,
+        recoilDamage,
+        move: params.move.name
+      })
+    );
+  }
 
   // Return updated state
   return {
@@ -234,7 +240,7 @@ function doubleEdge(params) {
 
 // Momentum Swing - Damage based on last move used
 function momentumSwing(params) {
-  const { attacker, defender, battleState } = params;
+  const { attacker, defender, battleState, isSimulation } = params;
 
   // Base damage - 12 points
   let baseDamage = 12;
@@ -246,24 +252,27 @@ function momentumSwing(params) {
     const lastMove = history[history.length - 1];
 
     // If last move was from this attacker and did damage
-    if (lastMove.attacker === 'fighter2' && lastMove.damage > 0) {
+    if (lastMove.attacker === attacker.id && lastMove.damage > 0) {
       // Bonus damage is 50% of last damage
       const bonusDamage = Math.round(lastMove.damage * 0.5);
       baseDamage += bonusDamage;
 
-      // Emit event about momentum bonus
-      battleEvents.emit(
-        BATTLE_EVENTS.MOMENTUM_BONUS,
-        createEventData(BATTLE_EVENTS.MOMENTUM_BONUS, {
-          fighter: attacker,
-          bonusDamage
-        })
-      );
+      // Only emit events if not a simulation
+      if (!isSimulation) {
+        // Emit event about momentum bonus
+        battleEvents.emit(
+          BATTLE_EVENTS.MOMENTUM_BONUS,
+          createEventData(BATTLE_EVENTS.MOMENTUM_BONUS, {
+            fighter: attacker,
+            bonusDamage
+          })
+        );
+      }
     }
   }
 
   // Apply damage to defender
-  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
   // Return updated state
   return {
@@ -275,7 +284,7 @@ function momentumSwing(params) {
 
 // All-or-Nothing - Either hits very hard or misses completely
 function allOrNothing(params) {
-  const { attacker, defender } = params;
+  const { attacker, defender, isSimulation } = params;
 
   // 60% chance to hit
   const hitChance = 0.6;
@@ -286,7 +295,7 @@ function allOrNothing(params) {
     const baseDamage = 30;
 
     // Apply damage to defender
-    const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+    const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
     // Return updated state
     return {
@@ -295,14 +304,17 @@ function allOrNothing(params) {
       damage
     };
   } else {
-    // Move missed
-    battleEvents.emit(
-      BATTLE_EVENTS.MOVE_MISSED,
-      createEventData(BATTLE_EVENTS.MOVE_MISSED, {
-        fighter: attacker,
-        move: params.move
-      })
-    );
+    // Only emit events if not a simulation
+    if (!isSimulation) {
+      // Move missed
+      battleEvents.emit(
+        BATTLE_EVENTS.MOVE_MISSED,
+        createEventData(BATTLE_EVENTS.MOVE_MISSED, {
+          fighter: attacker,
+          move: params.move
+        })
+      );
+    }
 
     return {
       hit: false,
@@ -314,7 +326,7 @@ function allOrNothing(params) {
 
 // Reversal - Does more damage when user has less HP
 function reversal(params) {
-  const { attacker, defender } = params;
+  const { attacker, defender, isSimulation } = params;
 
   // Base damage scales inversely with HP percentage
   // At full HP: 10 damage, at 1 HP: 30 damage
@@ -322,7 +334,7 @@ function reversal(params) {
   const baseDamage = 10 + Math.round((1 - hpPercentage) * 20);
 
   // Apply damage to defender
-  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
   // Return updated state
   return {
@@ -334,7 +346,7 @@ function reversal(params) {
 
 // Adaptive Strike - Damage based on opponent's remaining HP
 function adaptiveStrike(params) {
-  const { attacker, defender } = params;
+  const { attacker, defender, isSimulation } = params;
 
   // Base damage scales with opponent's HP percentage
   // At full HP: 20 damage, at 1 HP: 10 damage
@@ -342,7 +354,7 @@ function adaptiveStrike(params) {
   const baseDamage = 10 + Math.round(hpPercentage * 10);
 
   // Apply damage to defender
-  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage);
+  const { fighter: newDefender, damage } = applyDamage(defender, baseDamage, isSimulation);
 
   // Return updated state
   return {

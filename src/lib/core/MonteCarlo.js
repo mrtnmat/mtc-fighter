@@ -6,6 +6,7 @@
  */
 
 import { executeTurn, getValidMoves, simulateBattle, cloneBattleState } from './BattleEngine.js';
+import { FIGHTER_IDS } from './Constants.js';
 
 /**
  * Represents a node in the Monte Carlo search tree
@@ -97,7 +98,7 @@ class MCTSNode {
     this.visits++;
 
     // Add win if fighter2 (AI) won
-    if (result === 'fighter2') {
+    if (result === FIGHTER_IDS.AI) {
       this.wins++;
     }
 

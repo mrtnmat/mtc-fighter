@@ -72,35 +72,28 @@
     ></div>
   </div>
 
-  <!-- Move Buttons (Only for player, or for AI if battle is over or showMoveStats is true) -->
-  {#if isPlayer || battleOver || showMoveStats}
-    <div class="grid gap-2">
-      {#each Object.entries(fighter.moves) as [moveKey, move]}
-        <MoveButton
-          {move}
-          {moveKey}
-          {color}
-          disabled={battleOver || !isPlayer}
-          highlighted={highlightedMove === moveKey}
-          onSelect={handleMoveSelection}
-        />
+  <!-- Move Buttons - Show moves for both fighters -->
+  <div class="grid gap-2">
+    {#each Object.entries(fighter.moves) as [moveKey, move]}
+      <MoveButton
+        {move}
+        {moveKey}
+        {color}
+        disabled={battleOver || !isPlayer}
+        highlighted={highlightedMove === moveKey}
+        onSelect={handleMoveSelection}
+      />
 
-        <!-- Move Stats for AI (if available) -->
-        {#if showMoveStats && moveStats.length > 0}
-          {#if moveStats.find((stat) => stat.move === moveKey)}
-            {@const stat = moveStats.find((stat) => stat.move === moveKey)}
-            <div class="mb-3 text-xs bg-gray-800 text-white p-2 rounded">
-              <div>Win rate: {(stat.winRate * 100).toFixed(1)}%</div>
-              <div>Simulations: {stat.visits}</div>
-            </div>
-          {/if}
+      <!-- Move Stats for AI (if available) -->
+      {#if showMoveStats && moveStats.length > 0 && !isPlayer}
+        {#if moveStats.find((stat) => stat.move === moveKey)}
+          {@const stat = moveStats.find((stat) => stat.move === moveKey)}
+          <div class="mb-3 text-xs bg-gray-800 text-white p-2 rounded">
+            <div>Win rate: {(stat.winRate * 100).toFixed(1)}%</div>
+            <div>Simulations: {stat.visits}</div>
+          </div>
         {/if}
-      {/each}
-    </div>
-  {:else}
-    <!-- Placeholder for AI moves -->
-    <div class="text-center py-4 text-gray-500 italic">
-      AI's moves are hidden
-    </div>
-  {/if}
+      {/if}
+    {/each}
+  </div>
 </div>

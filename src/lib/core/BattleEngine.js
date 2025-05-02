@@ -23,17 +23,20 @@ export function createBattleState(fighter1, fighter2) {
     turn: 1,
     battleOver: false,
     winner: null,
-    history: []
+    history: [],
+    isSimulation: false // Flag to check if this is a simulation
   };
 
-  // Emit battle started event
-  battleEvents.emit(
-    BATTLE_EVENTS.BATTLE_STARTED,
-    createEventData(BATTLE_EVENTS.BATTLE_STARTED, {
-      fighter1: battleState.fighter1,
-      fighter2: battleState.fighter2
-    })
-  );
+  // Only emit battle started event if not a simulation
+  if (!battleState.isSimulation) {
+    battleEvents.emit(
+      BATTLE_EVENTS.BATTLE_STARTED,
+      createEventData(BATTLE_EVENTS.BATTLE_STARTED, {
+        fighter1: battleState.fighter1,
+        fighter2: battleState.fighter2
+      })
+    );
+  }
 
   return battleState;
 }
@@ -50,23 +53,27 @@ export function executeMove(state, attackerId, defenderId, moveKey) {
   // Get the move - but get the original move with its execute function intact
   const moveFromOriginalList = getMoveFromList(attacker.moves[moveKey].name);
 
-  // Emit move used event
-  battleEvents.emit(
-    BATTLE_EVENTS.MOVE_USED,
-    createEventData(BATTLE_EVENTS.MOVE_USED, {
-      fighter: attacker,
-      target: defender,
-      move: attacker.moves[moveKey],
-      moveKey
-    })
-  );
+  // Only emit events if not a simulation
+  if (!newState.isSimulation) {
+    // Emit move used event
+    battleEvents.emit(
+      BATTLE_EVENTS.MOVE_USED,
+      createEventData(BATTLE_EVENTS.MOVE_USED, {
+        fighter: attacker,
+        target: defender,
+        move: attacker.moves[moveKey],
+        moveKey
+      })
+    );
+  }
 
   // Execute the move's custom code
   const result = moveFromOriginalList.execute({
     attacker,
     defender,
     move: attacker.moves[moveKey],
-    battleState: newState
+    battleState: newState,
+    isSimulation: newState.isSimulation
   });
 
   // Update the state with the result
@@ -96,25 +103,29 @@ export function executeMove(state, attackerId, defenderId, moveKey) {
   let winner = newState.winner;
 
   if (newState[defenderId].hp <= 0) {
-    // Emit fighter fainted event
-    battleEvents.emit(
-      BATTLE_EVENTS.FIGHTER_FAINTED,
-      createEventData(BATTLE_EVENTS.FIGHTER_FAINTED, {
-        fighter: newState[defenderId]
-      })
-    );
+    if (!newState.isSimulation) {
+      // Emit fighter fainted event
+      battleEvents.emit(
+        BATTLE_EVENTS.FIGHTER_FAINTED,
+        createEventData(BATTLE_EVENTS.FIGHTER_FAINTED, {
+          fighter: newState[defenderId]
+        })
+      );
+    }
 
     battleOver = true;
     winner = attackerId;
 
-    // Emit battle ended event
-    battleEvents.emit(
-      BATTLE_EVENTS.BATTLE_ENDED,
-      createEventData(BATTLE_EVENTS.BATTLE_ENDED, {
-        winner: newState[attackerId],
-        loser: newState[defenderId]
-      })
-    );
+    if (!newState.isSimulation) {
+      // Emit battle ended event
+      battleEvents.emit(
+        BATTLE_EVENTS.BATTLE_ENDED,
+        createEventData(BATTLE_EVENTS.BATTLE_ENDED, {
+          winner: newState[attackerId],
+          loser: newState[defenderId]
+        })
+      );
+    }
   }
 
   return {
@@ -148,15 +159,17 @@ export function executeTurn(state, fighter1MoveKey, fighter2MoveKey) {
     return newState;
   }
 
-  // Emit turn started event
-  battleEvents.emit(
-    BATTLE_EVENTS.TURN_STARTED,
-    createEventData(BATTLE_EVENTS.TURN_STARTED, {
-      turn: newState.turn,
-      fighter1: newState.fighter1,
-      fighter2: newState.fighter2
-    })
-  );
+  if (!newState.isSimulation) {
+    // Emit turn started event
+    battleEvents.emit(
+      BATTLE_EVENTS.TURN_STARTED,
+      createEventData(BATTLE_EVENTS.TURN_STARTED, {
+        turn: newState.turn,
+        fighter1: newState.fighter1,
+        fighter2: newState.fighter2
+      })
+    );
+  }
 
   // Determine who goes first based on speed
   const fighter1Speed = newState.fighter1.speed;
@@ -177,21 +190,23 @@ export function executeTurn(state, fighter1MoveKey, fighter2MoveKey) {
       ['fighter1', 'fighter2', fighter1MoveKey]
     ];
 
-  // Emit speed comparison event
-  battleEvents.emit(
-    BATTLE_EVENTS.SPEED_COMPARISON,
-    createEventData(BATTLE_EVENTS.SPEED_COMPARISON, {
-      fighter1: {
-        name: newState.fighter1.name,
-        speed: fighter1Speed
-      },
-      fighter2: {
-        name: newState.fighter2.name,
-        speed: fighter2Speed
-      },
-      firstAttacker: newState[order[0][0]].name
-    })
-  );
+  if (!newState.isSimulation) {
+    // Emit speed comparison event
+    battleEvents.emit(
+      BATTLE_EVENTS.SPEED_COMPARISON,
+      createEventData(BATTLE_EVENTS.SPEED_COMPARISON, {
+        fighter1: {
+          name: newState.fighter1.name,
+          speed: fighter1Speed
+        },
+        fighter2: {
+          name: newState.fighter2.name,
+          speed: fighter2Speed
+        },
+        firstAttacker: newState[order[0][0]].name
+      })
+    );
+  }
 
   // Execute first attack
   newState = executeMove(
@@ -235,6 +250,10 @@ export function getValidMoves(fighter) {
  */
 export function simulateBattle(state, maxTurns = 100) {
   let simState = cloneBattleState(state);
+  
+  // Mark as simulation to prevent event flooding
+  simState.isSimulation = true;
+  
   let turnCount = 0;
 
   while (!simState.battleOver && turnCount < maxTurns) {
@@ -296,7 +315,8 @@ export function cloneBattleState(state) {
     turn: state.turn,
     battleOver: state.battleOver,
     winner: state.winner,
-    history: state.history ? [...state.history] : []
+    history: state.history ? [...state.history] : [],
+    isSimulation: state.isSimulation || false // Preserve simulation flag
   };
 
   return clone;

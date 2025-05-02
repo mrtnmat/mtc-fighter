@@ -18,8 +18,8 @@ export const MONTE_CARLO_SETTINGS = {
 
 // Fighter constants
 export const FIGHTER_CONSTANTS = {
-  // Default fighter stats
-  DEFAULT_HP: 100,
+  // Default fighter stats - Increased HP for longer battles
+  DEFAULT_HP: 200,
   DEFAULT_SPEED: 10,
   
   // Default fighter names

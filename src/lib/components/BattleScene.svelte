@@ -38,6 +38,14 @@
   let aiMoveStats = $state([]);
   let showAIMoveStats = $state(false);
 
+  // Define the common moveset for both fighters
+  const commonMoveSet = [
+    "PreciseStrike",
+    "WildSwing",
+    "CalculatedRisk",
+    "AllOrNothing"
+  ];
+
   // Initialize on component mount
   onMount(() => {
     startNewBattle();
@@ -53,7 +61,7 @@
     // Initialize the battle log
     initializeBattleLog();
 
-    // Create player fighter with 4 random moves
+    // Create player fighter with the common moveset
     const player = createFighter(
       FIGHTER_CONSTANTS.PLAYER_NAME,
       {
@@ -61,31 +69,21 @@
         maxHp: FIGHTER_CONSTANTS.DEFAULT_HP,
         speed: FIGHTER_CONSTANTS.DEFAULT_SPEED,
       },
-      getMovesSubset([
-        "PreciseStrike",
-        "WildSwing",
-        "CalculatedRisk",
-        "Reversal",
-      ]),
+      getMovesSubset(commonMoveSet)
     );
-    player.id = 1; // Add ID for move execution
+    player.id = FIGHTER_IDS.PLAYER; // Add ID for move execution
 
-    // Create AI fighter with 4 different moves
+    // Create AI fighter with the same moveset
     const ai = createFighter(
       FIGHTER_CONSTANTS.AI_NAME,
       {
         hp: FIGHTER_CONSTANTS.DEFAULT_HP,
         maxHp: FIGHTER_CONSTANTS.DEFAULT_HP,
-        speed: FIGHTER_CONSTANTS.DEFAULT_SPEED - 1, // Slightly slower than player
+        speed: FIGHTER_CONSTANTS.DEFAULT_SPEED, // Now equal speed
       },
-      getMovesSubset([
-        "DoubleEdge",
-        "AllOrNothing",
-        "MomentumSwing",
-        "AdaptiveStrike",
-      ]),
+      getMovesSubset(commonMoveSet)
     );
-    ai.id = 2; // Add ID for move execution
+    ai.id = FIGHTER_IDS.AI; // Add ID for move execution
 
     // Create battle state - create a fresh object
     battleState = createBattleState(player, ai);
